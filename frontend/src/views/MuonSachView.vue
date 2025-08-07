@@ -1,0 +1,225 @@
+<style scoped>
+.borrow-container {
+  max-width: 800px;
+  margin: auto;
+  padding: 20px;
+  text-align: center;
+  background: #f8f9fa;
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+h2 {
+  color: #FFC107;
+  text-transform: uppercase;
+}
+
+button {
+  margin: 10px;
+  padding: 10px 15px;
+  border: none;
+  border-radius: 5px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-add {
+  background-color: #b89e25;
+  color: white;
+}
+
+.btn-add:hover {
+  background-color: #e2bc13;
+}
+
+.btn-success {
+  background-color: #2196F3;
+  color: white;
+}
+
+.btn-success:hover {
+  background-color: #1976D2;
+}
+
+.btn-danger {
+  background-color: #dc3545;
+  color: white;
+}
+
+.btn-danger:hover {
+  background-color: #c82333;
+}
+
+.borrow-form {
+  background: white;
+  padding: 15px;
+  margin-top: 10px;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+label {
+  font-weight: bold;
+  display: block;
+  margin-top: 10px;
+  text-align: left;
+}
+
+select, input {
+  width: 100%;
+  padding: 8px;
+  margin-top: 5px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+}
+
+ul {
+  list-style: none;
+  padding: 0;
+}
+
+li {
+  background: #e9ecef;
+  padding: 10px;
+  margin: 5px 0;
+  border-radius: 5px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+li button {
+  font-size: 14px;
+}
+</style>
+
+<template>
+  <div class="borrow-container">
+    <h2> Đăng Ký Mượn Sách</h2>
+
+    <div class="borrow-form">      
+      <label for="book" >Chọn sách:</label>
+      <select v-model="selectedBook" @change="updateAvailableQuantity">
+        <option v-for="book in books" :key="book._id" :value="book">
+          {{ book.TENSACH }} (Còn: {{ book.SOQUYEN }})
+        </option>
+      </select>
+
+      <label for="quantity">Số lượng mượn:</label>
+      <input type="number" v-model.number="quantity" :max="selectedBook ? selectedBook.SOQUYEN : 1" min="1" />
+
+      <button class="btn btn-success" @click="addToBorrowList">
+        Thêm phiếu mượn
+      </button>
+
+      <button class="btn btn-secondary">
+        <router-link to="/" class="text-decoration-none text-muted">Quay lại</router-link>
+      </button>
+
+      <div v-if="borrowList.length > 0">
+        <br>
+        <h2>PHIẾU MƯỢN</h2>
+        <ul>
+          <li v-for="(item, index) in borrowList" :key="index">
+            {{ item.book.TENSACH }} - {{ item.quantity }} cuốn
+            <button class="btn btn-danger" @click="removeFromBorrowList(index)">Xóa</button>
+          </li>
+        </ul>
+
+        <button class="btn btn-add" @click="registerBorrow">Đăng ký Mượn</button>
+        <button @click="cancelBorrow" class="btn-cancel">Hủy Phiếu mượn</button>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+import { getBooks, borrowBooks } from "@/services/muonsachService";
+import { useStore } from 'vuex';
+
+export default {
+  data() {
+    const store = useStore(); 
+    return {
+      store, 
+      books: [],
+      selectedBook: null,
+      quantity: 1,
+      borrowList: [],
+      ngayMuon: "",
+    };
+  },
+
+  computed: {
+    docGiaId() {
+      return this.store.state.user._id; 
+    },
+  },
+
+  methods: {
+    async loadBooks() {
+      this.books = await getBooks();
+    },
+
+    updateAvailableQuantity() {
+      this.quantity = 1;
+    },
+
+    openBorrowForm() {
+      const today = new Date();
+      this.ngayMuon = today.toISOString().split("T")[0];
+    },
+
+    addToBorrowList() {
+      if (!this.selectedBook || !this.selectedBook.TENSACH || this.quantity < 1) {
+        alert("Vui lòng chọn sách hợp lệ và nhập số lượng!");
+        return;
+      }
+
+      const existing = this.borrowList.find(item => item.book._id === this.selectedBook._id);
+      if (existing) {
+        existing.quantity += this.quantity;
+      } else {
+        this.borrowList.push({ book: this.selectedBook, quantity: this.quantity });
+      }
+      console.log("borrowList:", JSON.stringify(this.borrowList, null, 2));
+    },
+
+    removeFromBorrowList(index) {
+      this.borrowList.splice(index, 1);
+    },
+
+    async registerBorrow() {
+      this.openBorrowForm(); 
+
+      if (this.borrowList.length === 0) {
+        alert("Danh sách mượn trống!");
+        return;
+      }
+
+      try {
+        await borrowBooks(this.docGiaId, this.borrowList, this.ngayMuon);
+        alert("Đăng ký mượn thành công! Vui lòng chờ duyệt.");
+        this.borrowList = [];
+        this.selectedBook = null;
+        this.quantity = 1;
+        this.showBorrowForm = false;
+      } catch (error) {
+        alert(error.response?.data?.message || "Lỗi không xác định!");
+        console.error(error);
+      }
+    },
+
+    cancelBorrow() {
+      this.borrowList = [];
+      this.selectedBook = null;
+      this.quantity = 1;
+    },
+  },
+
+  mounted() {
+    this.loadBooks(); 
+  },
+};
+</script>

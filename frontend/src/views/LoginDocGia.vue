@@ -1,0 +1,127 @@
+<style scoped>
+  h2 {
+    color: #b89e25;
+  }
+
+  button {
+    background-color: #b89e25;
+    color: white;
+    border: none;
+  }
+
+  button:hover {
+    background-color: #e2bc13;
+  }
+  
+  span {
+    color: #b89e25;
+  }
+</style>
+
+<template>
+  <div
+    class="container d-flex justify-content-center align-items-center vh-50 mt-5"
+  >
+    <div class="card p-3 shadow-lg" style="max-width: 400px; width: 100%">
+      <img src="../assets/LOGO_500x500px_transparent.png" alt="Logo" class="logo" style="width: 100px;align-self: center;"/>
+      <h2 class="text-center">Đăng nhập</h2>
+      <br>
+      <form @submit.prevent="handleLogin">
+        <div class="mb-3">
+          <input
+            type="text"
+            id="sdt"
+            v-model="sdt"
+            class="form-control"
+            placeholder="Số điện thoại"
+            required
+          />
+        </div>
+        <div class="mb-3">
+          <input
+            type="password"
+            id="password"
+            v-model="password"
+            class="form-control"
+            placeholder="Mật khẩu"
+            required
+          />
+        </div>
+        <button type="submit" class="btn btn-primary w-100">Đăng nhập</button>
+      </form>
+      <br>
+      <div class="text-start mt-2">
+        Bạn chưa có tài khoản?
+        <router-link
+          to="/register"
+          class="text-decoration-none text-muted"
+        >
+          <span>Đăng ký tài khoản mới</span>
+        </router-link>
+      </div>
+      <div class="text-start mt-2">
+        Bạn là nhân viên?
+        <router-link
+          to="/login-nhanvien"
+          class="text-decoration-none text-muted"
+        >
+          <span>Đăng nhập với tư cách nhân viên</span>
+        </router-link>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+  import axios from 'axios'
+
+  export default {
+    data() {
+      return {
+        sdt: '',
+        password: ''
+      }
+    },
+    methods: {
+      async handleLogin() {
+        try {
+          const response = await axios.post(
+            'http://localhost:3000/api/auth/login/docgia',
+            {
+              sdt: this.sdt,
+              password: this.password
+            }
+          )
+
+          const token = response.data?.token ?? response.data?.user?.token
+          //console.log("Token:", token);
+          const id = response.data?._id || response.data?.user?._id
+
+          this.$store.dispatch('login', {
+            _id: id,
+            role: 'docgia',
+            token: token
+          })
+
+          alert('Đăng nhập độc giả thành công')
+          this.$router.push('/')
+        } catch (error) {
+          if (error.response) {
+            if (
+              error.response.status === 404 ||
+              error.response.status === 500
+            ) {
+              alert('Số điện thoại chưa được đăng ký!')
+            } else if (error.response.status === 401) {
+              alert('Mật khẩu không đúng!')
+            } else {
+              alert('Lỗi hệ thống, vui lòng thử lại!')
+            }
+          } else {
+            alert('Không thể kết nối đến máy chủ!')
+          }
+        }
+      }
+    }
+  }
+</script>
