@@ -25,8 +25,10 @@
 
 ```sh
 cd backend
-npm install
-node server.js
+npm install 
+npm install vue-router@4
+node seedSach.js
+npm start
 ```
 
 - Server backend mặc định chạy ở http://localhost:3000
@@ -36,10 +38,11 @@ node server.js
 ```sh
 cd frontend
 npm install
+npm install axios
 npm run dev
 ```
 
-- Ứng dụng frontend mặc định chạy ở http://localhost:5173
+- Ứng dụng frontend mặc định chạy ở http://localhost:3001
 
 ### 3. Cấu hình
 
